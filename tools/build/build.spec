@@ -66,7 +66,6 @@ a = Analysis(
     datas=[
         *u2_datas,
         *gui_datas,
-        (str(project_root / "tools" / "delta" / "bspatch.exe"), "."),
     ],
     hiddenimports=[
         "PyQt6",
@@ -164,10 +163,8 @@ pyz = PYZ(a.pure)
 exe = EXE(
     pyz,
     a.scripts,
-    a.binaries,
-    a.datas,
     [],
-    name='tongkatong_v2.2.24',
+    name='tongkatong_v2.2.25',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -181,4 +178,14 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
     icon=str(project_root / "src" / "gui" / "assets" / "app_icon.ico"),
+)
+
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.datas,
+    strip=False,
+    upx=False,
+    upx_exclude=[],
+    name='tongkatong_v2.2.25',
 )

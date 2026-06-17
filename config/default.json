@@ -42,7 +42,7 @@
     "verify_tls": true
   },
   "update": {
-    "manifest_url": "https://raw.githubusercontent.com/juice4927/tongkatong-auto-checkin/main/version.json",
+    "manifest_url": "https://github.com/juice4927/tongkatong-auto-checkin",
     "auto_check_on_startup": true
   },
   "random_delay": {

@@ -1,2 +1,4 @@
 -r requirements.txt
 PyInstaller>=6.0.0
+# Velopack CLI is a .NET tool:
+# dotnet tool install -g vpk

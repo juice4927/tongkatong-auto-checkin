@@ -19,7 +19,7 @@
 - 支持导航异常自动恢复：先重进页面，再回主界面重试，最后重开目标 App
 - 支持 GPS 设置、网络检测、结果确认和失败分类
 - 支持托盘常驻、仪表盘状态汇总和日志追踪
-- 支持自更新清单和 PyInstaller 打包
+- 支持 Velopack 自动更新和 PyInstaller 打包
 
 ## 快速开始
 
@@ -53,6 +53,7 @@ python src/main.py
 
 ```bash
 pip install -r requirements-build.txt
+dotnet tool install -g vpk
 ```
 
 ## 使用说明
@@ -93,25 +94,22 @@ pyinstaller tools/build/build_debug.spec
 
 打包说明：
 
-- `tools/build/build.py` 是主打包入口，会自动更新版本号、执行发布前检查，并打包开源版 exe。
+- `tools/build/build.py` 是主打包入口，会自动更新版本号、执行发布前检查，并生成 Velopack 安装器和更新包。
 - `tools/build/build.spec` 对应入口 `src/main.py`。
 - `tools/build/build_debug.spec` 用于调试和问题排查。
-- 标准发布完成后，`dist/releases/v版本号/` 下会生成 `version.json`，可直接作为客户端更新清单使用。
+- 标准发布完成后，`dist/releases/v版本号/velopack/` 下会生成 Setup、`.nupkg` 和 Velopack 更新索引文件。
 
 ## 软件更新
 
-- 设置页支持填写更新清单地址，并检查是否有新版本。
-- 更新清单建议放在 GitHub 可直接访问的位置，例如 GitHub Raw 或 Release 附件地址。
-- 客户端发现新版本后，会下载新 exe，退出当前程序，并通过外部脚本完成替换和重启。
-- 更新清单格式使用 `version.json`，其中应包含版本号、下载地址和 `sha256`。
-- 新版清单资产键为 `opensource`，也可使用通用兜底键 `default`。
-- 推荐清单地址：`https://raw.githubusercontent.com/juice4927/tongkatong-auto-checkin/main/version.json`。
+- 设置页支持填写 Velopack 更新源，默认使用 GitHub Releases。
+- Velopack 不需要自建服务器；公开仓库可直接使用 GitHub Releases 承载安装包和更新包。
+- 推荐更新源：`https://github.com/juice4927/tongkatong-auto-checkin`。
+- 从旧版一体 exe 迁移到 Velopack 时，需要先下载新版 Setup 完成一次安装；后续版本即可在软件内自动下载、应用并重启。
 
-发布到 GitHub Release 时可以给打包脚本提供仓库信息：
+发布到 GitHub Release：
 
 ```powershell
-$env:GITHUB_OWNER = "你的 GitHub 用户名"
-$env:GITHUB_REPO = "仓库名"
+$env:GITHUB_REPO_URL = "https://github.com/juice4927/tongkatong-auto-checkin"
 $env:GITHUB_RELEASE_TAG = "v2.3.0"
 $env:APP_UPDATE_NOTES = "这里填写本次更新说明"
 python tools/build/build.py 2.3.0 --publish-release
@@ -158,7 +156,6 @@ project/
 │   │   ├── build.ps1            # Windows 快捷打包入口
 │   │   ├── build.spec           # 开源版打包配置
 │   │   └── build_debug.spec     # 调试版打包配置
-│   └── delta/                   # 增量更新工具
 ├── requirements.txt             # 运行时依赖
 ├── requirements-build.txt       # 打包依赖
 ├── LICENSE                      # 开源许可证

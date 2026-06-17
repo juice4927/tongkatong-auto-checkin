@@ -1,6 +1,6 @@
 # Windows 打包脚本快捷入口
 # 实际构建逻辑在 tools/build/build.py 中
-# 用法: .\tools\build\build.ps1 [patch|minor|major|x.y.z] [--installer] [--delta]
+# 用法: .\tools\build\build.ps1 [patch|minor|major|x.y.z] [--publish-release]
 
 $ErrorActionPreference = "Stop"
 

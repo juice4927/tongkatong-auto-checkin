@@ -17,8 +17,6 @@ from pathlib import Path
 
 from src.core.config import DEFAULT_PUBLIC_UPDATE_MANIFEST_URL
 from src.utils.app_updater import (
-    UpdateAsset,
-    UpdateError,
     consume_update_result,
     detect_current_edition,
     get_edition_label,
@@ -26,9 +24,9 @@ from src.utils.app_updater import (
     get_update_log_file,
     get_update_state_cache_file,
     get_update_state_file,
-    launch_self_update,
     read_update_result,
 )
+from src.utils.velopack_updater import apply_updates_and_restart
 from src.version import VERSION
 from src.gui.workers import (
     HolidayCheckWorker,
@@ -515,7 +513,7 @@ class SettingsWidget(QWidget):
 
         manifest_row = QHBoxLayout()
         manifest_row.setSpacing(6)
-        manifest_row.addWidget(self._field_label("清单地址:"))
+        manifest_row.addWidget(self._field_label("更新源:"))
         self.update_manifest_edit = QLineEdit()
         self.update_manifest_edit.setPlaceholderText(DEFAULT_PUBLIC_UPDATE_MANIFEST_URL)
         self.update_manifest_edit.setMinimumHeight(28)
@@ -523,7 +521,7 @@ class SettingsWidget(QWidget):
         update_group_layout.addLayout(manifest_row)
 
         update_group_layout.addWidget(
-            self._hint_label("默认已预填公开更新地址，建议保持为公开仓库根目录的 version.json，便于持续获取最新版。")
+            self._hint_label("默认使用 GitHub Releases 更新源。通过 Velopack 安装后可自动下载并应用更新。")
         )
 
         button_row = QHBoxLayout()
@@ -814,7 +812,7 @@ class SettingsWidget(QWidget):
                 f"version={VERSION}",
                 f"edition={get_edition_label(detect_current_edition())}",
                 f"runtime_root={runtime_root}",
-                f"manifest_url={self.update_manifest_edit.text().strip() or DEFAULT_PUBLIC_UPDATE_MANIFEST_URL}",
+                f"update_source={self.update_manifest_edit.text().strip() or DEFAULT_PUBLIC_UPDATE_MANIFEST_URL}",
             ]
             zf.writestr("summary.txt", "\n".join(summary))
             written += 1
@@ -1213,10 +1211,10 @@ class SettingsWidget(QWidget):
         self._update_worker.start()
 
     def _check_app_update(self, silent: bool = False):
-        manifest_url = (self.update_manifest_edit.text() or "").strip()
-        if not manifest_url:
+        source_url = (self.update_manifest_edit.text() or "").strip()
+        if not source_url:
             if not silent:
-                QMessageBox.information(self, "未配置地址", "请先填写更新清单地址（version.json）。")
+                QMessageBox.information(self, "未配置地址", "请先填写 Velopack 更新源地址。")
             return
 
         self.app_check_update_btn.setEnabled(False)
@@ -1224,7 +1222,7 @@ class SettingsWidget(QWidget):
         self.app_apply_update_btn.setEnabled(False)
         self.app_update_status_label.setText("正在检查...")
 
-        self._app_update_check_worker = AppUpdateCheckWorker(manifest_url)
+        self._app_update_check_worker = AppUpdateCheckWorker(source_url)
 
         def _on_done(result, error):
             self.app_check_update_btn.setEnabled(True)
@@ -1239,47 +1237,46 @@ class SettingsWidget(QWidget):
                 return
 
             self._pending_update_info = result
-            latest = result["latest_version"]
-            if result["need_update"]:
-                asset = result["asset"]
-                logger.info("检测到可用更新: 当前=v%s, 最新=v%s, 文件=%s", result["current_version"], latest, asset.file_name)
+            latest = result.latest_version
+            if result.need_update:
+                logger.info("检测到可用更新: 当前=v%s, 最新=v%s", result.current_version, latest)
                 self.app_apply_update_btn.setEnabled(True)
                 self.app_update_status_label.setText(f"发现新版本 v{latest}")
-                notes = asset.notes.strip() if asset.notes else "无更新说明"
+                notes = result.notes.strip() if result.notes else "无更新说明"
                 QMessageBox.information(
                     self,
                     "发现新版本",
-                    f"当前版本：v{result['current_version']}\n"
+                    f"当前版本：v{result.current_version}\n"
                     f"最新版本：v{latest}\n\n"
                     f"更新说明：\n{notes}\n\n"
-                    "点击“立即更新”即可下载并自动替换当前程序。",
+                    "点击“立即更新”即可下载并由 Velopack 应用更新。",
                 )
             else:
-                logger.info("软件已是最新版本: v%s", result["current_version"])
+                logger.info("软件已是最新版本: v%s", result.current_version)
                 self.app_apply_update_btn.setEnabled(False)
                 self.app_update_status_label.setText("已是最新")
                 if not silent:
-                    QMessageBox.information(self, "已是最新", f"当前已是最新版本 v{result['current_version']}。")
+                    QMessageBox.information(self, "已是最新", f"当前已是最新版本 v{result.current_version}。")
 
         self._app_update_check_worker.done.connect(_on_done)
         self._app_update_check_worker.start()
 
     def _download_and_apply_update(self):
-        if not self._pending_update_info or not self._pending_update_info.get("need_update"):
+        if not self._pending_update_info or not self._pending_update_info.need_update:
             QMessageBox.information(self, "暂无更新", "请先检查更新，并确认有可用新版本。")
             return
 
-        asset = self._pending_update_info["asset"]
+        update_info = self._pending_update_info
         reply = QMessageBox.question(
             self,
             "确认更新",
-            f"将下载并安装 v{asset.version}。\n\n更新过程中会自动关闭当前软件并重启，是否继续？",
+            f"将下载并安装 v{update_info.latest_version}。\n\n更新过程中会自动关闭当前软件并重启，是否继续？",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
         if reply != QMessageBox.StandardButton.Yes:
             return
 
-        logger.info("用户确认开始更新: 目标版本=v%s, 文件=%s", asset.version, asset.file_name)
+        logger.info("用户确认开始更新: 目标版本=v%s", update_info.latest_version)
         self.app_check_update_btn.setEnabled(False)
         self.app_apply_update_btn.setEnabled(False)
         self.app_apply_update_btn.setText("下载中...")
@@ -1288,15 +1285,13 @@ class SettingsWidget(QWidget):
         self.app_update_progress.setValue(0)
         self.app_update_progress.setFormat("准备下载...")
 
-        self._app_update_download_worker = AppUpdateDownloadWorker(asset)
+        self._app_update_download_worker = AppUpdateDownloadWorker(update_info)
 
         def _on_progress(downloaded, total):
             if total > 0:
-                percent = int(downloaded * 100 / total)
+                percent = max(0, min(100, int(downloaded * 100 / total)))
                 self.app_update_progress.setValue(percent)
-                self.app_update_progress.setFormat(
-                    f"已下载 {downloaded / 1024 / 1024:.1f} / {total / 1024 / 1024:.1f} MB"
-                )
+                self.app_update_progress.setFormat(f"已下载 {percent}%")
                 self.app_update_status_label.setText(f"正在下载... {percent}%")
             else:
                 dots = "." * ((downloaded // (1024 * 1024)) % 3 + 1)
@@ -1308,7 +1303,7 @@ class SettingsWidget(QWidget):
             if message:
                 self.app_update_status_label.setText(message)
 
-        def _on_done(downloaded_path, error):
+        def _on_done(result, error):
             self.app_check_update_btn.setEnabled(True)
             self.app_apply_update_btn.setText("立即更新")
             self.app_update_progress.setRange(0, 100)
@@ -1322,22 +1317,20 @@ class SettingsWidget(QWidget):
                 return
 
             try:
-                logger.info("更新包已下载，准备启动替换流程: %s", downloaded_path)
-                launch_self_update(Path(downloaded_path), asset.version, VERSION)
-            except UpdateError as e:
+                logger.info("更新包已下载，准备由 Velopack 应用更新")
+                apply_updates_and_restart(result)
+            except Exception as e:
                 self.app_apply_update_btn.setEnabled(True)
                 self.app_update_status_label.setText("更新失败")
                 self.app_update_progress.setVisible(False)
-                logger.error("启动更新替换流程失败: %s", e)
+                logger.error("Velopack 应用更新失败: %s", e)
                 QMessageBox.warning(self, "无法启动更新", str(e))
                 return
 
             self.app_update_status_label.setText("即将重启")
             self.app_update_progress.setValue(100)
             self.app_update_progress.setFormat("下载完成，准备重启...")
-            logger.info("更新替换流程已启动，准备退出当前程序")
-            QMessageBox.information(self, "更新开始", "更新包已下载完成，软件将自动退出并替换为新版本。")
-            self._quit_for_update()
+            logger.info("Velopack 更新流程已启动")
 
         self._app_update_download_worker.progress.connect(_on_progress)
         self._app_update_download_worker.status.connect(_on_status)

@@ -24,6 +24,7 @@ class TestImports(unittest.TestCase):
         import src.gui.widgets.settings
         import src.gui.widgets.time_config
         import src.gui.workers
+        import src.utils.velopack_updater
 
     def test_main_entrypoint_has_no_license_gate(self):
         source = (ROOT / "src" / "main.py").read_text(encoding="utf-8")

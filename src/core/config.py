@@ -14,7 +14,7 @@ from dataclasses import dataclass
 logger = logging.getLogger(__name__)
 
 DEFAULT_PUBLIC_UPDATE_MANIFEST_URL = (
-    "https://raw.githubusercontent.com/juice4927/tongkatong-auto-checkin/main/version.json"
+    "https://github.com/juice4927/tongkatong-auto-checkin"
 )
 
 @dataclass

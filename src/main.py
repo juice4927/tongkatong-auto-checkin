@@ -59,6 +59,7 @@ os.chdir(str(BASE_PATH))
 
 from src.utils.logger import setup_logging
 from src.utils.app_updater import get_edition_label
+from src.utils.velopack_updater import run_startup_update_hooks
 from src.gui.main_window import main
 
 
@@ -99,6 +100,8 @@ def _check_single_instance():
 
 
 if __name__ == "__main__":
+    run_startup_update_hooks()
+
     # 设置日志目录
     # 打包后 console=False，sys.stdout 为 None，禁用控制台输出
     _console_output = sys.stdout is not None

@@ -5,13 +5,11 @@ GUI 后台线程模块 — 从 settings.py 中提取的 QThread 子类
 """
 from PyQt6.QtCore import QThread, pyqtSignal
 
-from src.utils.app_updater import (
-    check_app_update,
-    detect_current_edition,
-    download_update_asset,
-    UpdateAsset,
+from src.utils.velopack_updater import (
+    VelopackUpdateResult,
+    check_for_updates,
+    download_updates,
 )
-from src.version import VERSION
 
 
 class HolidayCheckWorker(QThread):
@@ -43,14 +41,13 @@ class AppUpdateCheckWorker(QThread):
 
     done = pyqtSignal(object, object)  # result, error
 
-    def __init__(self, manifest_url: str):
+    def __init__(self, source_url: str):
         super().__init__()
-        self._manifest_url = manifest_url
+        self._source_url = source_url
 
     def run(self):
         try:
-            edition = detect_current_edition()
-            result = check_app_update(self._manifest_url, VERSION, edition)
+            result = check_for_updates(self._source_url)
             self.done.emit(result, None)
         except Exception as e:
             self.done.emit(None, str(e))
@@ -59,23 +56,23 @@ class AppUpdateCheckWorker(QThread):
 class AppUpdateDownloadWorker(QThread):
     """下载软件更新包的后台线程"""
 
-    progress = pyqtSignal(int, int)  # downloaded, total
+    progress = pyqtSignal(int, int)  # downloaded percent, total percent
     status = pyqtSignal(str)  # status text
-    done = pyqtSignal(object, object)  # downloaded_path, error
+    done = pyqtSignal(object, object)  # result, error
 
-    def __init__(self, asset: UpdateAsset):
+    def __init__(self, result: VelopackUpdateResult):
         super().__init__()
-        self._asset = asset
+        self._result = result
 
     def run(self):
         try:
-            file_path = download_update_asset(
-                self._asset,
-                progress_callback=self.progress.emit,
-                status_callback=self.status.emit,
-                current_version=VERSION,
-            )
-            self.done.emit(str(file_path), None)
+            self.status.emit("正在下载更新包...")
+
+            def _progress(percent):
+                self.progress.emit(int(percent), 100)
+
+            download_updates(self._result, _progress)
+            self.done.emit(self._result, None)
         except Exception as e:
             self.done.emit(None, str(e))
 

@@ -10,7 +10,14 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 
-from src.core.config import ConfigManager, RandomDelayConfig, MuMuConfig, AppStateConfig, CheckinEntry
+from src.core.config import (
+    DEFAULT_PUBLIC_UPDATE_MANIFEST_URL,
+    AppStateConfig,
+    CheckinEntry,
+    ConfigManager,
+    MuMuConfig,
+    RandomDelayConfig,
+)
 
 
 class TestConfig(unittest.TestCase):
@@ -186,6 +193,12 @@ class TestCheckinEntryValidation(unittest.TestCase):
 
 
 class TestDefaultConfig(unittest.TestCase):
+    def test_default_update_source_is_github_repository(self):
+        self.assertEqual(
+            DEFAULT_PUBLIC_UPDATE_MANIFEST_URL,
+            "https://github.com/juice4927/tongkatong-auto-checkin",
+        )
+
     def test_get_default_config_ignores_user_overrides(self):
         with tempfile.TemporaryDirectory() as td:
             cfg_dir = Path(td)
