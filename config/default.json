@@ -1,0 +1,64 @@
+{
+  "mumu": {
+    "host": "127.0.0.1",
+    "port": 5555,
+    "adb_path": "D:/MuMuPlayer/nx_device/12.0/shell/adb.exe"
+  },
+  "checkin": {
+    "morning_signin": {
+      "enabled": true,
+      "time_range": ["07:20", "07:55"],
+      "label": "上午签到"
+    },
+    "morning_signout": {
+      "enabled": true,
+      "time_range": ["11:35", "12:00"],
+      "label": "上午签退"
+    },
+    "afternoon_signin": {
+      "enabled": true,
+      "time_range": ["13:10", "13:25"],
+      "label": "下午签到"
+    },
+    "afternoon_signout": {
+      "enabled": true,
+      "time_range": ["17:10", "17:30"],
+      "label": "下午签退"
+    }
+  },
+  "app": {
+    "package_name": "com.tencent.weworklocal",
+    "activity": ""
+  },
+  "holiday": {
+    "skip_weekend": true,
+    "skip_holiday": true,
+    "extra_workdays": [],
+    "extra_holidays": []
+  },
+  "notification": {
+    "enabled": false,
+    "webhook": "",
+    "verify_tls": true
+  },
+  "update": {
+    "manifest_url": "https://raw.githubusercontent.com/juice4927/tongkatong-auto-checkin/main/version.json",
+    "auto_check_on_startup": true
+  },
+  "random_delay": {
+    "min_seconds": 1,
+    "max_seconds": 5
+  },
+  "app_state": {
+    "auto_connect": false,
+    "auto_start": false,
+    "keep_alive_enabled": true,
+    "recovery_base_backoff_seconds": 5,
+    "recovery_max_backoff_seconds": 300,
+    "recovery_max_failures": 20,
+    "recovery_pause_minutes_after_max_failures": 30,
+    "recovery_quiet_hours_enabled": false,
+    "recovery_quiet_start_hour": 0,
+    "recovery_quiet_end_hour": 0
+  }
+}

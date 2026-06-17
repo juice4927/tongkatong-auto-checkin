@@ -1,0 +1,14 @@
+{
+  "version": "2.2.24",
+  "build_date": "2026-06-18",
+  "published_at": "2026-06-18T01:53:28",
+  "notes": "开源首发版本：移除授权校验，修复 MuMu 路径定位和自更新脚本。",
+  "assets": {
+    "opensource": {
+      "file_name": "tongkatong_v2.2.24.exe",
+      "sha256": "19ff28dd0ab43fbabce4642fba5fbf204b31f84a42cb4085dd7f7ebff4e570a3",
+      "size": 113092579,
+      "url": "https://github.com/juice4927/tongkatong-auto-checkin/releases/download/v2.2.24/tongkatong_v2.2.24.exe"
+    }
+  }
+}

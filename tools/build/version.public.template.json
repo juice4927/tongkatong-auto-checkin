@@ -1,0 +1,14 @@
+{
+  "version": "2.2.3",
+  "build_date": "2026-06-09",
+  "published_at": "2026-06-09T12:00:00",
+  "notes": "这里填写本次版本更新说明",
+  "assets": {
+    "opensource": {
+      "file_name": "通卡通_v2.2.3.exe",
+      "sha256": "替换为开源版 exe 的 sha256",
+      "size": 123456789,
+      "url": "https://github.com/<public-update-repo>/releases/download/v2.2.3/通卡通_v2.2.3.exe"
+    }
+  }
+}
