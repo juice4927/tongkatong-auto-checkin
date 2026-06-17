@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import (
     QGridLayout,
     QScrollArea, QSizePolicy, QProgressBar
 )
-from PyQt6.QtCore import pyqtSignal, QThread, Qt
+from PyQt6.QtCore import pyqtSignal, Qt
 from pathlib import Path
 
 from src.core.config import DEFAULT_PUBLIC_UPDATE_MANIFEST_URL

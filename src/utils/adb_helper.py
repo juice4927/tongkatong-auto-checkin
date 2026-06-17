@@ -247,6 +247,24 @@ class MuMuHelper:
     
     def __init__(self, adb: ADBHelper = None):
         self.adb = adb or ADBHelper()
+
+    @staticmethod
+    def _mumu_exe_candidates(base_path: Path) -> list[Path]:
+        """Return plausible MuMu executable paths for a user-provided path."""
+        if base_path.suffix.lower() == ".exe":
+            return [base_path]
+        if base_path.name.lower() == "nx_main":
+            return [
+                base_path / "MuMuManager.exe",
+                base_path / "MuMuNxMain.exe",
+            ]
+        return [
+            base_path / "nx_main" / "MuMuManager.exe",
+            base_path / "nx_main" / "MuMuNxMain.exe",
+            base_path / "MuMuPlayer.exe",
+            base_path / "MuMuPlayer12.exe",
+            base_path / "NemuPlayer.exe",
+        ]
     
     def find_mumu_adb(self) -> Optional[Path]:
         """查找 MuMu 自带的 adb"""
@@ -288,14 +306,7 @@ class MuMuHelper:
         search_paths.extend(self.MUMU12_DEFAULT_PATHS)
 
         for base in search_paths:
-            for sub, exe_name in [
-                ("nx_main", "MuMuManager.exe"),
-                ("nx_main", "MuMuNxMain.exe"),
-                ("",        "MuMuPlayer.exe"),
-                ("",        "MuMuPlayer12.exe"),
-                ("",        "NemuPlayer.exe"),
-            ]:
-                exe = (base / sub / exe_name) if sub else (base / exe_name)
+            for exe in self._mumu_exe_candidates(base):
                 if exe.exists():
                     logger.info(f"找到 MuMu 主程序: {exe}")
                     return exe
@@ -313,9 +324,11 @@ class MuMuHelper:
         # 优先用 MuMuManager 启动实例（更可靠）
         manager = None
         for base in search_paths:
-            p = base / "nx_main" / "MuMuManager.exe"
-            if p.exists():
-                manager = p
+            for candidate in self._mumu_exe_candidates(base):
+                if candidate.name.lower() == "mumumanager.exe" and candidate.exists():
+                    manager = candidate
+                    break
+            if manager:
                 break
 
         if manager:
