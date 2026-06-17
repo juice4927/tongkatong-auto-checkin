@@ -115,6 +115,31 @@ $env:APP_UPDATE_NOTES = "这里填写本次更新说明"
 python tools/build/build.py 2.3.0 --publish-release
 ```
 
+### 代码签名
+
+默认构建不做代码签名。未签名安装包可以运行，但 Windows 可能提示“未知发布者”。
+
+如果已有 Windows 代码签名证书，可把签名参数交给 Velopack：
+
+```powershell
+$env:VELOPACK_SIGN_PARAMS = '/fd sha256 /tr http://timestamp.digicert.com /td sha256 /a'
+python tools/build/build.py 2.3.0
+```
+
+如果使用自定义签名命令：
+
+```powershell
+$env:VELOPACK_SIGN_TEMPLATE = 'signtool sign /fd sha256 /tr http://timestamp.digicert.com /td sha256 /a "{{file}}"'
+python tools/build/build.py 2.3.0
+```
+
+如果使用 Azure Trusted Signing：
+
+```powershell
+$env:VELOPACK_AZURE_TRUSTED_SIGN_FILE = 'C:\path\to\metadata.json'
+python tools/build/build.py 2.3.0
+```
+
 ## 依赖说明
 
 运行时依赖的核心组件如下：

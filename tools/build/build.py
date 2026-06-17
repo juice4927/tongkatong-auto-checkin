@@ -13,6 +13,11 @@ Optional environment variables:
     GITHUB_REPO_URL      Repository URL used by vpk upload github
                          default: https://github.com/juice4927/tongkatong-auto-checkin
     GITHUB_TOKEN         Token passed to vpk upload github, if needed
+    VELOPACK_SIGN_PARAMS Parameters passed to signtool.exe via vpk --signParams
+    VELOPACK_SIGN_TEMPLATE
+                         Custom signing command passed to vpk --signTemplate
+    VELOPACK_AZURE_TRUSTED_SIGN_FILE
+                         Azure Trusted Signing metadata file passed to vpk
 """
 from __future__ import annotations
 
@@ -175,10 +180,31 @@ def run_pyinstaller(ver: str, pyinstaller_dist_dir: Path) -> Path:
     return app_dir
 
 
-def run_velopack_pack(ver: str, app_dir: Path, output_dir: Path, release_notes: Path) -> None:
-    print("\n开始 Velopack 打包...")
-    output_dir.mkdir(parents=True, exist_ok=True)
-    vpk = find_vpk()
+def signing_args_from_env() -> list[str]:
+    args: list[str] = []
+    sign_params = os.environ.get("VELOPACK_SIGN_PARAMS", "").strip()
+    sign_template = os.environ.get("VELOPACK_SIGN_TEMPLATE", "").strip()
+    azure_trusted_sign_file = os.environ.get("VELOPACK_AZURE_TRUSTED_SIGN_FILE", "").strip()
+
+    if sign_params and sign_template:
+        raise RuntimeError("VELOPACK_SIGN_PARAMS 和 VELOPACK_SIGN_TEMPLATE 只能配置一个。")
+
+    if sign_params:
+        args.extend(["--signParams", sign_params])
+    if sign_template:
+        args.extend(["--signTemplate", sign_template])
+    if azure_trusted_sign_file:
+        args.extend(["--azureTrustedSignFile", azure_trusted_sign_file])
+    return args
+
+
+def build_velopack_pack_command(
+    vpk: str,
+    ver: str,
+    app_dir: Path,
+    output_dir: Path,
+    release_notes: Path,
+) -> list[str]:
     main_exe = f"tongkatong_v{ver}.exe"
 
     cmd = [
@@ -205,6 +231,18 @@ def run_velopack_pack(ver: str, app_dir: Path, output_dir: Path, release_notes: 
     ]
     if ICON_FILE.exists():
         cmd.extend(["--icon", str(ICON_FILE)])
+    cmd.extend(signing_args_from_env())
+    return cmd
+
+
+def run_velopack_pack(ver: str, app_dir: Path, output_dir: Path, release_notes: Path) -> None:
+    print("\n开始 Velopack 打包...")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    cmd = build_velopack_pack_command(find_vpk(), ver, app_dir, output_dir, release_notes)
+    if "--signParams" in cmd or "--signTemplate" in cmd or "--azureTrustedSignFile" in cmd:
+        print("Velopack 签名已启用。")
+    else:
+        print("Velopack 签名未启用；如需签名，请配置 VELOPACK_SIGN_PARAMS 或 VELOPACK_SIGN_TEMPLATE。")
 
     result = subprocess.run(cmd, cwd=str(ROOT))
     if result.returncode != 0:
