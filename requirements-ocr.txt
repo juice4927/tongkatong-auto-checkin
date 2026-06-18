@@ -1,0 +1,7 @@
+# Optional OCR/template matching support.
+#
+# The default check-in flow uses uiautomator2 XML/UI hierarchy parsing and does
+# not require this stack. Install this file only when enabling legacy image
+# recognition helpers.
+-r requirements.txt
+rapidocr_onnxruntime>=1.3.0
