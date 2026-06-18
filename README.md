@@ -115,6 +115,29 @@ $env:APP_UPDATE_NOTES = "这里填写本次更新说明"
 python tools/build/build.py 2.3.0 --publish-release
 ```
 
+### 安装位置
+
+Velopack 默认生成一键安装的 `TongKaTong-win-Setup.exe`。双击安装时不显示目录选择页；需要自定义目录时，可从命令行安装：
+
+```powershell
+.\TongKaTong-win-Setup.exe --installto "D:\Apps\TongKaTong"
+```
+
+如果需要 MSI 包，可在构建时开启：
+
+```powershell
+$env:VELOPACK_MSI = 'true'
+$env:VELOPACK_INST_LOCATION = 'Either'  # PerUser / PerMachine / Either
+python tools/build/build.py 2.3.0
+```
+
+MSI 安装时也可通过 `VELOPACK_INSTALLDIR` 指定目录：
+
+```powershell
+$env:VELOPACK_INSTALLDIR = 'D:\Apps\TongKaTong'
+msiexec /i .\TongKaTong-win-Setup.msi
+```
+
 ### 代码签名
 
 默认构建不做代码签名。未签名安装包可以运行，但 Windows 可能提示“未知发布者”。

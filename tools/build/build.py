@@ -18,6 +18,9 @@ Optional environment variables:
                          Custom signing command passed to vpk --signTemplate
     VELOPACK_AZURE_TRUSTED_SIGN_FILE
                          Azure Trusted Signing metadata file passed to vpk
+    VELOPACK_MSI         Set to true/1/yes to also build an MSI package
+    VELOPACK_INST_LOCATION
+                         MSI install scope: PerUser, PerMachine, or Either
 """
 from __future__ import annotations
 
@@ -198,6 +201,27 @@ def signing_args_from_env() -> list[str]:
     return args
 
 
+def installer_args_from_env() -> list[str]:
+    args: list[str] = []
+    build_msi = os.environ.get("VELOPACK_MSI", "").strip().lower()
+    inst_location = os.environ.get("VELOPACK_INST_LOCATION", "").strip()
+
+    if build_msi in {"1", "true", "yes", "on"}:
+        args.extend(["--msi", "true"])
+    elif build_msi in {"0", "false", "no", "off", ""}:
+        pass
+    else:
+        raise RuntimeError("VELOPACK_MSI 只能是 true/false。")
+
+    if inst_location:
+        allowed = {"peruser": "PerUser", "permachine": "PerMachine", "either": "Either"}
+        normalized = allowed.get(inst_location.lower())
+        if not normalized:
+            raise RuntimeError("VELOPACK_INST_LOCATION 只能是 PerUser、PerMachine 或 Either。")
+        args.extend(["--instLocation", normalized])
+    return args
+
+
 def build_velopack_pack_command(
     vpk: str,
     ver: str,
@@ -231,6 +255,7 @@ def build_velopack_pack_command(
     ]
     if ICON_FILE.exists():
         cmd.extend(["--icon", str(ICON_FILE)])
+    cmd.extend(installer_args_from_env())
     cmd.extend(signing_args_from_env())
     return cmd
 
