@@ -1,0 +1,11 @@
+Force UTF-8 for Windows release builds
+
+The GitHub Windows runner can start Python with a legacy console encoding, which breaks the release script when it prints Chinese status text. The release workflow now opts Python into UTF-8 mode so build output remains printable during Velopack publishing.
+
+Constraint: Release runs on windows-latest and prints localized build messages.
+Rejected: Remove localized build output | the underlying failure is runner encoding, not the messages.
+Confidence: high
+Scope-risk: narrow
+Tested: python -m compileall -q tools src tests
+Tested: python -m pytest tests/test_imports.py -q
+
