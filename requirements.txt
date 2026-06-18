@@ -16,7 +16,5 @@ loguru>=0.7.0
 requests>=2.31.0
 velopack>=1.2.0
 
-# Image recognition (OCR fallback + template matching)
-# rapidocr_onnxruntime installs onnxruntime / opencv / numpy / shapely dependencies.
+# Screenshot support used by uiautomator2 and optional diagnosis helpers.
 Pillow>=10.0.0
-rapidocr_onnxruntime>=1.3.0

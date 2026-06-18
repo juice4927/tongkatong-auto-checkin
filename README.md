@@ -176,12 +176,12 @@ pydantic
 loguru
 requests
 Pillow
-rapidocr_onnxruntime
 ```
 
 补充说明：
 
-- `rapidocr_onnxruntime` 会连带安装 OCR 与模板匹配所需的 `onnxruntime / opencv / numpy / shapely`。
+- 默认打卡流程使用 `uiautomator2` 的 XML/UI 层级解析定位按钮，不安装 OCR 依赖。
+- 旧版 OCR/模板匹配辅助代码保留为可选能力，需要时执行 `pip install -r requirements-ocr.txt`；该文件会连带安装 `rapidocr_onnxruntime / onnxruntime / opencv / numpy / shapely`，体积较大。
 - `PyInstaller` 已从运行依赖中拆出，避免把纯打包工具混入日常运行环境。
 
 ## 目录结构
@@ -205,6 +205,7 @@ project/
 │   │   ├── build.spec           # 开源版打包配置
 │   │   └── build_debug.spec     # 调试版打包配置
 ├── requirements.txt             # 运行时依赖
+├── requirements-ocr.txt         # 可选 OCR/模板匹配依赖
 ├── requirements-build.txt       # 打包依赖
 ├── LICENSE                      # 开源许可证
 └── README.md
