@@ -1,0 +1,20 @@
+# GUI
+PyQt6>=6.6.0
+
+# Android automation
+uiautomator2>=3.0.0
+
+# Scheduling
+APScheduler>=3.10.0
+
+# Holiday calendar
+chinesecalendar>=1.11.0
+
+# Config and utilities
+pydantic>=2.0.0
+loguru>=0.7.0
+requests>=2.31.0
+velopack>=1.2.0
+
+# Screenshot support used by uiautomator2 and optional diagnosis helpers.
+Pillow>=10.0.0

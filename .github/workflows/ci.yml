@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Compile check
+        run: python -m compileall -q src tests tools
+
+      - name: Core modules import
+        shell: python
+        run: |
+          import src.core.config
+          import src.core.scheduler
+          import src.core.automator
+          import src.core.xml_parser
+          import src.core.navigator
+          import src.core.button_finder
+          import src.core.checkin_verifier
+          import src.core.failure_codes
+          import src.core.holiday
+          import src.core.random_time
+          print('core_import_ok')
+
+      - name: Run tests
+        run: python -m pytest -q
