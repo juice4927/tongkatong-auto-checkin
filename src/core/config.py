@@ -294,6 +294,7 @@ class ConfigManager:
         
         self.config_file = self.config_dir / "user_config.json"
         self._migrate_legacy_runtime_config()
+        self._ensure_default_config()
         self._config: Optional[Config] = None
 
     def _migrate_legacy_runtime_config(self) -> None:
@@ -310,7 +311,32 @@ class ConfigManager:
             logger.info("已迁移旧版本配置: %s -> %s", legacy_config_file, self.config_file)
         except Exception as e:
             logger.warning("迁移旧版本配置失败: %s", e)
-    
+
+    def _ensure_default_config(self) -> None:
+        """确保 default.json 已被复制到稳定数据目录，不覆盖已有文件。"""
+        target = self.config_dir / "default.json"
+        if target.exists():
+            return
+
+        # 先查 PyInstaller 运行时所在的 default.json（frozen 模式的资源目录）
+        candidates = []
+        if getattr(sys, "frozen", False):
+            # sys._MEIPASS 是 PyInstaller 解包目录
+            base = getattr(sys, "_MEIPASS", "") or Path(sys.executable).parent
+            candidates.append(Path(base) / "config" / "default.json")
+        # 开发模式：项目根目录
+        candidates.append(Path(__file__).parent.parent.parent / "config" / "default.json")
+
+        for src in candidates:
+            if src.exists():
+                try:
+                    self.config_dir.mkdir(parents=True, exist_ok=True)
+                    target.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+                    logger.info("已复制默认配置文件: %s -> %s", src, target)
+                    return
+                except Exception as e:
+                    logger.warning("复制默认配置失败: %s", e)
+
     @property
     def config(self) -> Config:
         """获取配置"""
@@ -320,7 +346,7 @@ class ConfigManager:
     
     # 内置默认配置（exe 独立运行时无需外部 default.json）
     _BUILTIN_DEFAULT = {
-        "mumu": {"host": "127.0.0.1", "port": 5555, "adb_path": ""},
+        "mumu": {"host": "127.0.0.1", "port": 5555, "adb_path": "", "mumu_exe_path": ""},
         "checkin": {
             "morning_signin":    {"enabled": True, "time_range": ["07:20", "07:55"], "label": "上午签到"},
             "morning_signout":   {"enabled": True, "time_range": ["11:35", "12:00"], "label": "上午签退"},
