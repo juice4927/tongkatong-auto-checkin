@@ -6,7 +6,6 @@ import threading
 import logging
 from typing import Optional, Callable, Dict, List, Tuple
 
-import adbutils
 import uiautomator2 as u2
 
 from .xml_parser import (
@@ -359,18 +358,18 @@ class UIAutomator2Impl(AutomatorBase):
             device_addr = self._device_addr
             logger.info(f"正在连接设备: {device_addr}")
 
+            # 无论是否配置了自定义 ADB 路径，都先用 adb connect 确保设备已注册到 ADB server
             if self.adb_path:
                 ok, detail = ADBHelper(self.adb_path).connect(self.host, self.port)
                 if not ok:
                     raise RuntimeError(detail)
-                adb_client = adbutils.AdbClient()
-                device = u2.connect(adb_client.device(device_addr))
             else:
-                # 即使未配置自定义 ADB 路径，也先用系统 adb connect 确保设备可达
                 ok, detail = ADBHelper().connect(self.host, self.port)
                 if not ok:
-                    logger.warning(f"系统 adb connect 失败: {detail}")
-                device = u2.connect(device_addr)
+                    logger.warning(f"系统 adb connect 失败（将尝试 u2.connect 兜底）: {detail}")
+
+            # 统一使用 u2.connect(地址字符串)，让 uiautomator2 自行处理后续协议
+            device = u2.connect(device_addr)
 
             # 验证连接
             device_info = device.device_info

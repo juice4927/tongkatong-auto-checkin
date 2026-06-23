@@ -152,17 +152,12 @@ class TestDeviceConnectionClassification(unittest.TestCase):
 
     def test_connect_uses_configured_adb_path_for_uiautomator2(self):
         adb_path = r"E:\Program Files\Netease\MuMuPlayer-12.0\nx_main\adb.exe"
-        fake_adb_device = Mock(name="adb_device")
-        fake_client = Mock()
-        fake_client.connect.return_value = "already connected to 127.0.0.1:5555"
-        fake_client.device.return_value = fake_adb_device
 
         fake_device = Mock()
         type(fake_device).device_info = PropertyMock(return_value={"brand": "MuMu", "model": "12"})
 
         with (
             patch("src.core.automator.ADBHelper") as adb_helper_cls,
-            patch("src.core.automator.adbutils.AdbClient", return_value=fake_client) as client_cls,
             patch("src.core.automator.u2.connect", return_value=fake_device) as u2_connect,
         ):
             adb_helper_cls.return_value.connect.return_value = (True, "connected")
@@ -171,9 +166,7 @@ class TestDeviceConnectionClassification(unittest.TestCase):
 
         adb_helper_cls.assert_called_once_with(adb_path)
         adb_helper_cls.return_value.connect.assert_called_once_with("127.0.0.1", 5555)
-        client_cls.assert_called_once_with()
-        fake_client.device.assert_called_once_with("127.0.0.1:5555")
-        u2_connect.assert_called_once_with(fake_adb_device)
+        u2_connect.assert_called_once_with("127.0.0.1:5555")
 
 
 if __name__ == "__main__":
