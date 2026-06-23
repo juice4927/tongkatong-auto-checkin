@@ -169,7 +169,7 @@ exe = EXE(
     pyz,
     a.scripts,
     [],
-    name='tongkatong_v2.2.26',
+    name='tongkatong_v2.2.30',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -192,5 +192,5 @@ coll = COLLECT(
     strip=False,
     upx=False,
     upx_exclude=[],
-    name='tongkatong_v2.2.26',
+    name='tongkatong_v2.2.30',
 )
