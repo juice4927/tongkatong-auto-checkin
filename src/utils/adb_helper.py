@@ -305,7 +305,7 @@ class MuMuHelper:
             if key in seen:
                 continue
             seen.add(key)
-            for sub in ("shell", "nx_main", "nx_device/12.0/shell", "nx_device/shell"):
+            for sub in ("nx_device/12.0/shell", "nx_device/shell", "shell", "nx_main"):
                 adb_path = base_path / sub / "adb.exe"
                 if adb_path.exists():
                     logger.info(f"找到 MuMu adb: {adb_path}")
@@ -349,10 +349,19 @@ class MuMuHelper:
         return None
 
     def launch_mumu(self, custom_path: str = "", wait_seconds: int = 60,
-                    app_package: str = "", host: str = "127.0.0.1", port: int = 5555) -> bool:
+                    app_package: str = "", host: str = "127.0.0.1", port: int = 5555,
+                    candidate_ports: Optional[list[int]] = None) -> bool:
         """
         启动 MuMu 模拟器，等待就绪后关闭广告并打开指定 APP。
         优先使用 MuMuManager control launch 启动实例，回退到直接启动主程序。
+        
+        Args:
+            custom_path: MuMu 安装路径或 exe 路径
+            wait_seconds: 等待超时秒数
+            app_package: 启动后要打开的 APP 包名
+            host: 模拟器主机地址
+            port: 主 ADB 端口
+            candidate_ports: 额外尝试的 ADB 端口列表（如 [7555, 5555]）
         """
         search_paths = [Path(custom_path)] if custom_path else []
         search_paths.extend(self.MUMU12_DEFAULT_PATHS)
@@ -390,19 +399,31 @@ class MuMuHelper:
                 logger.error(f"启动 MuMu 失败: {e}")
                 return False
 
-        # 等待设备状态变为 device
-        target_addr = f"{host}:{port}"
-        logger.info(f"等待 MuMu 启动（最多 {wait_seconds} 秒，目标设备: {target_addr}）...")
+        # 等待设备状态变为 device（在多个端口中探测）
+        candidates = [port]
+        if candidate_ports:
+            for p in candidate_ports:
+                if p not in candidates:
+                    candidates.append(p)
+        target_addrs = [f"{host}:{p}" for p in candidates]
+        addrs_str = ", ".join(target_addrs)
+        logger.info(f"等待 MuMu 启动（最多 {wait_seconds} 秒，探测端口: {addrs_str}）...")
         for i in range(wait_seconds):
             _time.sleep(1)
             devices = self.adb.devices()
-            if any(d['serial'] == target_addr and d['status'] == 'device' for d in devices):
-                logger.info(f"MuMu 已就绪（{i + 1}秒）")
-                break
-            if i % 5 == 4:
-                self.adb._run_command(["connect", target_addr])
+            for addr in target_addrs:
+                if any(d['serial'] == addr and d['status'] == 'device' for d in devices):
+                    logger.info(f"MuMu 已就绪（{i + 1}秒），设备: {addr}")
+                    break
+            else:
+                # 没找到任何就绪设备，继续等待
+                if i % 5 == 4:
+                    for addr in target_addrs:
+                        self.adb._run_command(["connect", addr])
+                continue
+            break  # 找到就绪设备，跳出外层循环
         else:
-            logger.warning(f"MuMu 启动超时，目标设备 {target_addr} 仍未就绪")
+            logger.warning(f"MuMu 启动超时，未检测到就绪设备（探测端口: {addrs_str}）")
             return False
 
         # 关闭广告：返回桌面

@@ -508,7 +508,7 @@ class MainWindow(QMainWindow):
                         return
                     except Exception as e:
                         last_error = str(e)
-                        logger.debug(f"端口 {port} 连接失败: {last_error}")
+                        logger.warning(f"端口 {port} 连接失败: {last_error}")
                         continue
 
                 from src.utils.adb_helper import ADBHelper, MuMuHelper
@@ -518,7 +518,8 @@ class MainWindow(QMainWindow):
                 try:
                     launched = mumu.launch_mumu(self._mumu_exe_path, wait_seconds=60,
                                                 app_package=self._pkg,
-                                                host=self._host, port=self._port)
+                                                host=self._host, port=self._port,
+                                                candidate_ports=port_candidates)
                 except Exception as e:
                     logger.error(f"启动 MuMu 异常: {e}", exc_info=True)
                     msg = f"启动 MuMu 失败: {e}"
@@ -549,11 +550,14 @@ class MainWindow(QMainWindow):
                         return
                     except Exception as e:
                         last_error = str(e)
-                        logger.debug(f"端口 {port} 启动后连接失败: {last_error}")
+                        logger.error(f"端口 {port} 启动后连接失败: {last_error}")
                         continue
                 msg = f"连接失败：已尝试端口 {port_candidates}，ADB={adb_path}"
                 if last_error:
                     msg += f"\n最后错误: {last_error}"
+                else:
+                    msg += "\n最后错误: 未知错误（请查看日志）"
+                logger.error(msg)
                 self.done.emit(False, msg, None)
 
         self._conn_worker = _ConnWorker(

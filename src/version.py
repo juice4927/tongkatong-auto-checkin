@@ -1,7 +1,7 @@
 """
 版本信息
 """
-VERSION = "2.2.30"
+VERSION = "2.2.31"
 BUILD_DATE = "2026-06-23"
 APP_NAME = "通卡通"
 AUTHOR = "淙宝"
