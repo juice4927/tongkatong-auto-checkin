@@ -366,6 +366,10 @@ class UIAutomator2Impl(AutomatorBase):
                 adb_client = adbutils.AdbClient()
                 device = u2.connect(adb_client.device(device_addr))
             else:
+                # 即使未配置自定义 ADB 路径，也先用系统 adb connect 确保设备可达
+                ok, detail = ADBHelper().connect(self.host, self.port)
+                if not ok:
+                    logger.warning(f"系统 adb connect 失败: {detail}")
                 device = u2.connect(device_addr)
 
             # 验证连接

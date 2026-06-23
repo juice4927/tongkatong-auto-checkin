@@ -119,12 +119,6 @@ class ADBHelper:
                     logger.info(f"已连接到设备: {address}")
                     return True, output
                 return False, detail
-            elif "already connected" in output.lower():
-                ready, detail = self._verify_device_ready(address)
-                if ready:
-                    self._connected_device = address
-                    return True, output
-                return False, detail
             else:
                 return False, self._format_connect_failure(address, output)
         
@@ -311,7 +305,7 @@ class MuMuHelper:
             if key in seen:
                 continue
             seen.add(key)
-            for sub in ("shell", "nx_main", "nx_device/12.0/shell"):
+            for sub in ("shell", "nx_main", "nx_device/12.0/shell", "nx_device/shell"):
                 adb_path = base_path / sub / "adb.exe"
                 if adb_path.exists():
                     logger.info(f"找到 MuMu adb: {adb_path}")
@@ -397,17 +391,18 @@ class MuMuHelper:
                 return False
 
         # 等待设备状态变为 device
-        logger.info(f"等待 MuMu 启动（最多 {wait_seconds} 秒）...")
+        target_addr = f"{host}:{port}"
+        logger.info(f"等待 MuMu 启动（最多 {wait_seconds} 秒，目标设备: {target_addr}）...")
         for i in range(wait_seconds):
             _time.sleep(1)
             devices = self.adb.devices()
-            if any(d['status'] == 'device' for d in devices):
+            if any(d['serial'] == target_addr and d['status'] == 'device' for d in devices):
                 logger.info(f"MuMu 已就绪（{i + 1}秒）")
                 break
             if i % 5 == 4:
-                self.adb._run_command(["connect", f"{host}:{port}"])
+                self.adb._run_command(["connect", target_addr])
         else:
-            logger.warning("MuMu 启动超时，ADB 仍未检测到设备")
+            logger.warning(f"MuMu 启动超时，目标设备 {target_addr} 仍未就绪")
             return False
 
         # 关闭广告：返回桌面

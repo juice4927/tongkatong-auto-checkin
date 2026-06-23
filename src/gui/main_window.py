@@ -493,6 +493,7 @@ class MainWindow(QMainWindow):
                     found = MuMuHelper().find_mumu_adb(self._mumu_exe_path)
                     resolved_adb_path = str(found) if found else ""
 
+                last_error = ""
                 for port in port_candidates:
                     try:
                         auto = UIAutomator2Impl(host=self._host, port=port, adb_path=resolved_adb_path or None)
@@ -505,40 +506,55 @@ class MainWindow(QMainWindow):
                             pass
                         self.done.emit(True, model, auto)
                         return
-                    except Exception:
+                    except Exception as e:
+                        last_error = str(e)
+                        logger.debug(f"端口 {port} 连接失败: {last_error}")
                         continue
 
-                # 连接失败 → 尝试启动 MuMu
+                from src.utils.adb_helper import ADBHelper, MuMuHelper
+                adb_path = resolved_adb_path or "adb"
+                adb = ADBHelper(adb_path)
+                mumu = MuMuHelper(adb)
                 try:
-                    from src.utils.adb_helper import ADBHelper, MuMuHelper
-                    adb_path = resolved_adb_path or "adb"
-                    adb = ADBHelper(adb_path)
-                    mumu = MuMuHelper(adb)
                     launched = mumu.launch_mumu(self._mumu_exe_path, wait_seconds=60,
-                                                app_package=self._pkg)
-                    if not launched:
-                        self.done.emit(False, "MuMu 启动失败或超时，请手动启动模拟器", None)
-                        return
-                    for port in port_candidates:
-                        try:
-                            ok, detail = adb.connect(self._host, port)
-                            if not ok:
-                                raise RuntimeError(detail)
-                            auto = UIAutomator2Impl(host=self._host, port=port, adb_path=adb_path)
-                            auto.connect()
-                            info = auto.device.device_info
-                            model = f"{info.get('brand', '?')} {info.get('model', '?')}"
-                            try:
-                                auto.open_app(self._pkg)
-                            except Exception:
-                                pass
-                            self.done.emit(True, model, auto)
-                            return
-                        except Exception:
-                            continue
-                    self.done.emit(False, f"连接失败：已尝试端口 {port_candidates}，ADB={adb_path}", None)
+                                                app_package=self._pkg,
+                                                host=self._host, port=self._port)
                 except Exception as e:
-                    self.done.emit(False, str(e), None)
+                    logger.error(f"启动 MuMu 异常: {e}", exc_info=True)
+                    msg = f"启动 MuMu 失败: {e}"
+                    if last_error:
+                        msg += f"\n上次尝试错误: {last_error}"
+                    self.done.emit(False, msg, None)
+                    return
+                if not launched:
+                    msg = "MuMu 启动失败或超时，请手动启动模拟器"
+                    if last_error:
+                        msg += f"\n上次尝试错误: {last_error}"
+                    self.done.emit(False, msg, None)
+                    return
+                for port in port_candidates:
+                    try:
+                        ok, detail = adb.connect(self._host, port)
+                        if not ok:
+                            raise RuntimeError(detail)
+                        auto = UIAutomator2Impl(host=self._host, port=port, adb_path=adb_path)
+                        auto.connect()
+                        info = auto.device.device_info
+                        model = f"{info.get('brand', '?')} {info.get('model', '?')}"
+                        try:
+                            auto.open_app(self._pkg)
+                        except Exception:
+                            pass
+                        self.done.emit(True, model, auto)
+                        return
+                    except Exception as e:
+                        last_error = str(e)
+                        logger.debug(f"端口 {port} 启动后连接失败: {last_error}")
+                        continue
+                msg = f"连接失败：已尝试端口 {port_candidates}，ADB={adb_path}"
+                if last_error:
+                    msg += f"\n最后错误: {last_error}"
+                self.done.emit(False, msg, None)
 
         self._conn_worker = _ConnWorker(
             self.config.mumu.host,
