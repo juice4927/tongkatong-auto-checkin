@@ -155,18 +155,24 @@ class TestDeviceConnectionClassification(unittest.TestCase):
 
         fake_device = Mock()
         type(fake_device).device_info = PropertyMock(return_value={"brand": "MuMu", "model": "12"})
+        fake_device.info = Mock()
 
         with (
             patch("src.core.automator.ADBHelper") as adb_helper_cls,
             patch("src.core.automator.u2.connect", return_value=fake_device) as u2_connect,
         ):
-            adb_helper_cls.return_value.connect.return_value = (True, "connected")
+            helper_mock = adb_helper_cls.return_value
+            helper_mock.connect.return_value = (True, "connected to 127.0.0.1:5555")
+            helper_mock.devices.return_value = [
+                {"serial": "127.0.0.1:5555", "status": "device"}
+            ]
+            helper_mock._run_command.return_value = (True, "ok")
+
             automator = UIAutomator2Impl(adb_path=adb_path)
             self.assertTrue(automator.connect())
 
-        adb_helper_cls.assert_called_once_with(adb_path)
-        adb_helper_cls.return_value.connect.assert_called_once_with("127.0.0.1", 5555)
-        u2_connect.assert_called_once_with("127.0.0.1:5555")
+            helper_mock.connect.assert_any_call("127.0.0.1", 5555)
+            u2_connect.assert_any_call("127.0.0.1:5555")
 
 
 if __name__ == "__main__":
