@@ -346,7 +346,8 @@ class ConfigManager:
     
     # 内置默认配置（exe 独立运行时无需外部 default.json）
     _BUILTIN_DEFAULT = {
-        "mumu": {"host": "127.0.0.1", "port": 5555, "adb_path": "", "mumu_exe_path": ""},
+        "mumu": {"host": "127.0.0.1", "port": 5555, "adb_path": "", "mumu_exe_path": "",
+                 "gps_latitude": 31.353518, "gps_longitude": 120.540528},
         "checkin": {
             "morning_signin":    {"enabled": True, "time_range": ["07:20", "07:55"], "label": "上午签到"},
             "morning_signout":   {"enabled": True, "time_range": ["11:35", "12:00"], "label": "上午签退"},
