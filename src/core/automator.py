@@ -354,50 +354,59 @@ class UIAutomator2Impl(AutomatorBase):
             return True
 
         # 2. 缓存无效，重新连接
-        device_addr = self._device_addr
-        adb = self.adb_path or "adb"
-        logger.info(f"正在连接设备: {device_addr} (ADB={adb})")
-
-        # 2a. 确保 ADB server 在运行（先 kill 掉可能残留的僵尸 server）
-        self._adb_restart(adb)
-
-        # 2b. adb connect 连接设备（多次重试）
-        ok, detail = self._adb_connect_with_retry(adb)
-        if not ok:
-            # 连接失败 — 看看 adb devices 里有什么，给出诊断信息
-            diag = self._adb_diagnose(adb)
-            raise DeviceConnectionError(
-                f"adb connect {device_addr} 失败\n原因: {detail}\n{diag}",
-                failure_code="adb_connect_failed",
-            )
-
-        # 2c. 验证设备在 adb devices 中状态为 "device"
-        if not self._adb_verify_device_ready(adb, device_addr):
-            raise DeviceConnectionError(
-                f"设备 {device_addr} 在 adb devices 中状态异常（非 'device'）",
-                failure_code="device_not_ready",
-            )
-
-        # 2d. 用 u2 建立 uiautomator2 会话
-        device = self._u2_connect_with_fallback(device_addr)
-
-        # 3. 验证连接
         try:
+            device_addr = self._device_addr
+            adb = self.adb_path or "adb"
+            logger.info(f"正在连接设备: {device_addr} (ADB={adb})")
+
+            # 2a. 确保 ADB server 在运行（先 kill 掉可能残留的僵尸 server）
+            self._adb_restart(adb)
+
+            # 2b. adb connect 连接设备（多次重试）
+            ok, detail = self._adb_connect_with_retry(adb)
+            if not ok:
+                diag = self._adb_diagnose(adb)
+                raise DeviceConnectionError(
+                    f"adb connect {device_addr} 失败\n原因: {detail}\n{diag}",
+                    failure_code="adb_connect_failed",
+                )
+
+            # 2c. 验证设备在 adb devices 中状态为 "device"
+            if not self._adb_verify_device_ready(adb, device_addr):
+                raise DeviceConnectionError(
+                    f"设备 {device_addr} 在 adb devices 中状态异常（非 'device'）",
+                    failure_code="device_not_ready",
+                )
+
+            # 2d. 用 u2 建立 uiautomator2 会话
+            device = self._u2_connect_with_fallback(device_addr)
+
+            # 3. 验证会话
             device_info = device.device_info
             logger.info(f"设备连接成功: {device_info.get('brand', 'Unknown')} {device_info.get('model', 'Unknown')}")
-        except Exception as e:
-            raise DeviceConnectionError(
-                f"设备已通过 adb 连接，但 uiautomator2 会话验证失败: {e}",
-                failure_code="u2_session_failed",
-            )
 
-        # 4. 缓存会话
-        with self._session_cache_lock:
-            self._session_cache[self._device_addr] = DeviceSession(device, self.session_ttl)
-        self.device = device
-        self._connected = True
-        self._last_connection_failure_code = ""
-        return True
+            # 4. 缓存会话
+            with self._session_cache_lock:
+                self._session_cache[self._device_addr] = DeviceSession(device, self.session_ttl)
+            self.device = device
+            self._connected = True
+            self._last_connection_failure_code = ""
+            return True
+
+        except DeviceConnectionError:
+            # 已分类的错误直接抛出，不二次包装
+            self._connected = False
+            self._clear_cache()
+            raise
+        except Exception as e:
+            logger.error(f"连接设备失败: {e}", exc_info=True)
+            self._connected = False
+            self._last_connection_failure_code = "device_connect_failed"
+            self._clear_cache()
+            raise DeviceConnectionError(
+                f"无法连接设备 {self._device_addr}: {e}",
+                failure_code="device_connect_failed",
+            ) from e
 
     # ── ADB / u2 连接辅助方法 ──────────────────────────────────────────
 
@@ -458,24 +467,24 @@ class UIAutomator2Impl(AutomatorBase):
     def _u2_connect_with_fallback(self, device_addr: str):
         """
         用 u2 建立连接，失败时尝试多种策略：
-        - 策略1: u2.connect_usb(serial) —— 让 u2 自己处理
-        - 策略2: u2.connect(addr) —— 字符串地址
-        - 策略3: 从 adbutils 拿设备再传给 u2
+        - 策略1: u2.connect(addr) —— 字符串地址，最简单
+        - 策略2: u2.connect_usb(serial) —— 备选 API
+        - 策略3: adbutils.AdbClient().device() —— 最后兜底
         """
-        last_err = ""
+        errors = []
 
-        # 策略1: 直接用字符串地址（最简单，和初始版一样）
+        # 策略1: 直接用字符串地址（和初始版一样）
         try:
             logger.info(f"u2.connect('{device_addr}') 尝试中...")
             d = u2.connect(device_addr)
-            d.info  # 立即触发一次通信，验证会话有效
+            d.info
             logger.info("u2.connect(字符串) 成功")
             return d
         except Exception as e:
-            last_err = str(e)
-            logger.warning(f"策略1 u2.connect(字符串) 失败: {last_err}")
+            errors.append(f"字符串: {e}")
+            logger.warning(f"策略1 失败: {e}")
 
-        # 策略2: u2.connect_usb（可能需要用 serial 而非 addr）
+        # 策略2: u2.connect_usb
         try:
             logger.info("u2.connect_usb() 尝试中...")
             d = u2.connect_usb(device_addr)
@@ -483,9 +492,10 @@ class UIAutomator2Impl(AutomatorBase):
             logger.info("u2.connect_usb() 成功")
             return d
         except Exception as e:
-            logger.warning(f"策略2 u2.connect_usb() 失败: {e}")
+            errors.append(f"connect_usb: {e}")
+            logger.warning(f"策略2 失败: {e}")
 
-        # 策略3: adbutils 路径（兜底）
+        # 策略3: adbutils 路径
         try:
             logger.info("adbutils 路径尝试中...")
             import adbutils
@@ -496,10 +506,11 @@ class UIAutomator2Impl(AutomatorBase):
             logger.info("adbutils 路径成功")
             return d
         except Exception as e:
-            logger.warning(f"策略3 adbutils 路径失败: {e}")
+            errors.append(f"adbutils: {e}")
+            logger.warning(f"策略3 失败: {e}")
 
         raise DeviceConnectionError(
-            f"u2 连接失败（3种策略均失败）\n策略1: {last_err}\n设备地址: {device_addr}",
+            f"u2 连接失败（3种策略均失败）\n" + "\n".join(f"  {err}" for err in errors),
             failure_code="u2_all_failed",
         )
 
