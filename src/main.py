@@ -38,7 +38,7 @@ sys.path.insert(0, str(BASE_PATH))
 # 必须在 import chinese_calendar 之前设置，且用 importlib 确保优先级高于 FrozenImporter
 if getattr(sys, 'frozen', False):
     _pkg_dir = BASE_PATH / 'packages'
-    _pkg_dir.mkdir(exist_ok=True)
+    _pkg_dir.mkdir(parents=True, exist_ok=True)
     _pkg_str = str(_pkg_dir)
     if _pkg_str not in sys.path:
         sys.path.insert(0, _pkg_str)

@@ -92,7 +92,9 @@ class TestSchedulerResilience(unittest.TestCase):
             holiday_checker.is_workday.return_value = True
 
             orch = CheckinOrchestrator(automator, holiday_checker, cm)
-            orch._do_checkin(Mock(value="morning_signin"), "morning_signin")
+            # 模拟 GPS 设置命令执行失败（MuMuManager 存在但命令失败）
+            with patch.object(orch, "_setup_gps", return_value=False):
+                orch._do_checkin(Mock(value="morning_signin"), "morning_signin")
 
             automator.open_app.assert_not_called()
             automator.do_checkin.assert_not_called()

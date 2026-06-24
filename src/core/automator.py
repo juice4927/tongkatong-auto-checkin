@@ -969,7 +969,7 @@ class UIAutomator2Impl(AutomatorBase):
             if save_path is None:
                 from pathlib import Path
                 screenshot_dir = Path(__file__).parent.parent.parent / "screenshots"
-                screenshot_dir.mkdir(exist_ok=True)
+                screenshot_dir.mkdir(parents=True, exist_ok=True)
                 save_path = screenshot_dir / f"screenshot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
 
                 # 清理 3 天前的截图

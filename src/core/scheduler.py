@@ -329,7 +329,7 @@ class CheckinOrchestrator:
         try:
             root = base_dir or Path.cwd()
             log_dir = Path(root) / "logs"
-            log_dir.mkdir(exist_ok=True)
+            log_dir.mkdir(parents=True, exist_ok=True)
             record_file = log_dir / "checkin_records.log"
             status = "成功" if success else "失败"
             line = f"{timestamp} | {action_name} | {status} | {message}\n"
@@ -720,8 +720,8 @@ class CheckinOrchestrator:
                     return True
                 logger.warning(f"GPS设置失败(returncode={r.returncode}): {r.stderr.strip()}")
                 return False
-            logger.warning("未找到 MuMuManager.exe，GPS 未设置")
-            return False
+            logger.warning("未找到 MuMuManager.exe，GPS 未设置（若不在 MuMu 环境运行可忽略）")
+            return True  # 非 MuMu 环境，跳过 GPS 设置不算失败
         except Exception as e:
             logger.warning(f"GPS设置异常: {e}")
             return False
