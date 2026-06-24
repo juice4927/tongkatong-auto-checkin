@@ -19,7 +19,7 @@ from PyQt6.QtGui import QIcon, QAction, QFont, QShortcut, QKeySequence
 
 from src.core.config import ConfigManager, Config, get_runtime_root
 from src.core.scheduler import CheckinOrchestrator
-from src.core.automator import UIAutomator2Impl, MockAutomator, CheckinAction
+from src.core.automator import UIAutomator2Impl, MockAutomator, CheckinAction, DeviceConnectionError
 from src.core.holiday import HolidayChecker
 from src.utils.logger import setup_logging, get_log_manager, LogManager
 from src.utils.app_updater import get_edition_label
@@ -506,7 +506,7 @@ class MainWindow(QMainWindow):
                             pass
                         self.done.emit(True, model, auto)
                         return
-                    except Exception as e:
+                    except (DeviceConnectionError, RuntimeError, OSError) as e:
                         last_error = str(e)
                         logger.warning(f"端口 {port} 连接失败: {last_error}")
                         continue
@@ -548,7 +548,7 @@ class MainWindow(QMainWindow):
                             pass
                         self.done.emit(True, model, auto)
                         return
-                    except Exception as e:
+                    except (DeviceConnectionError, RuntimeError, OSError) as e:
                         last_error = str(e)
                         logger.error(f"端口 {port} 启动后连接失败: {last_error}")
                         continue

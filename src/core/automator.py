@@ -379,7 +379,7 @@ class UIAutomator2Impl(AutomatorBase):
             )
 
         # 2d. 用 u2 建立 uiautomator2 会话
-        device = self._u2_connect_with_fallback(adb, device_addr)
+        device = self._u2_connect_with_fallback(device_addr)
 
         # 3. 验证连接
         try:
@@ -455,7 +455,7 @@ class UIAutomator2Impl(AutomatorBase):
         except Exception as e:
             return f"ADB 诊断失败: {e}"
 
-    def _u2_connect_with_fallback(self, adb: str, device_addr: str):
+    def _u2_connect_with_fallback(self, device_addr: str):
         """
         用 u2 建立连接，失败时尝试多种策略：
         - 策略1: u2.connect_usb(serial) —— 让 u2 自己处理
@@ -1143,7 +1143,7 @@ class UIAutomator2Impl(AutomatorBase):
         is_afternoon_signout = 17 <= h or h < 4
         
         # 根据 action 和时间段确定目标行索引
-        is_signin = action in (CheckinAction.MORNING_SIGNIN, CheckinAction.SIGNIN)
+        is_signin = action in (CheckinAction.MORNING_SIGNIN, CheckinAction.AFTERNOON_SIGNIN, CheckinAction.SIGNIN)
         
         if is_morning_signin:
             target_idx = 0  # 上午签到

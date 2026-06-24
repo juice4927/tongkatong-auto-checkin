@@ -322,8 +322,9 @@ class ConfigManager:
         candidates = []
         if getattr(sys, "frozen", False):
             # sys._MEIPASS 是 PyInstaller 解包目录
-            base = getattr(sys, "_MEIPASS", "") or Path(sys.executable).parent
-            candidates.append(Path(base) / "config" / "default.json")
+            meipass = getattr(sys, "_MEIPASS", None)
+            if meipass:
+                candidates.append(Path(meipass) / "config" / "default.json")
         # 开发模式：项目根目录
         candidates.append(Path(__file__).parent.parent.parent / "config" / "default.json")
 
